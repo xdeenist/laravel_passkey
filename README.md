@@ -1,66 +1,170 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Laravel Passkey Authentication
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+SPA-приложение с аутентификацией по email/password и FIDO2/WebAuthn passkey.
 
-## About Laravel
+## Стек
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Backend:** Laravel 11, PHP 8.5, Laravel Passport (OAuth2), laragear/webauthn v4.1
+- **Frontend:** Vue 3, Vue Router 4, Vite, Tailwind CSS, Axios
+- **Инфраструктура:** Laravel Sail (Docker), MySQL 8.4, Redis
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Требования
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-## Learning Laravel
+Если на машине установлены PHP и Composer — можно использовать их напрямую (см. вариант A).
+Если нет — достаточно только Docker (см. вариант B).
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Установка
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### Вариант A: PHP и Composer установлены
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+git clone <repo-url>
+cd passkey_laravel
+composer install
+cp .env.example .env
+```
 
-## Laravel Sponsors
+### Вариант B: Только Docker (без PHP/Composer/Node)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+git clone <repo-url>
+cd passkey_laravel
+cp .env.example .env
+```
 
-### Premium Partners
+Установите зависимости через одноразовый Docker-контейнер:
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+```bash
+docker run --rm \
+    -u "$(id -u):$(id -g)" \
+    -v "$(pwd):/var/www/html" \
+    -w /var/www/html \
+    laravelsail/php85-composer:latest \
+    composer install --ignore-platform-reqs
+```
 
-## Contributing
+### Общие шаги (после варианта A или B)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Отредактируйте `.env`:
 
-## Code of Conduct
+```env
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=passkey_laravel
+DB_USERNAME=sail
+DB_PASSWORD=password
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+SESSION_DRIVER=redis
+CACHE_STORE=redis
+REDIS_HOST=redis
+```
 
-## Security Vulnerabilities
+Запустите контейнеры и выполните настройку:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+./vendor/bin/sail up -d
+./vendor/bin/sail artisan key:generate
+./vendor/bin/sail artisan migrate
+./vendor/bin/sail artisan passport:install
+./vendor/bin/sail npm install
+./vendor/bin/sail npm run build
+```
 
-## License
+## Запуск для разработки
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+./vendor/bin/sail up -d
+./vendor/bin/sail npm run dev
+```
+
+- Приложение: http://localhost
+- Vite HMR: порт 5173
+
+## Тестовый пользователь (опционально)
+
+```bash
+./vendor/bin/sail artisan db:seed
+```
+
+- Email: `test@example.com`
+- Пароль: `password`
+
+## Функциональность
+
+- Регистрация и логин по email/password
+- Добавление passkey (FIDO2/WebAuthn) в профиле
+- Логин через passkey
+- Смена имени с подтверждением через passkey
+- Управление passkeys (просмотр, удаление)
+- Logout
+
+## API Endpoints
+
+### Публичные
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| POST | `/api/register` | Регистрация |
+| POST | `/api/login` | Логин по email/password |
+| POST | `/api/passkeys/login/options` | Получение challenge для passkey-логина |
+| POST | `/api/passkeys/login` | Логин через passkey |
+
+### Требуют авторизации (Bearer token)
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/user` | Текущий пользователь |
+| POST | `/api/logout` | Logout |
+| GET | `/api/passkeys` | Список passkeys |
+| POST | `/api/passkeys/register/options` | Challenge для регистрации passkey |
+| POST | `/api/passkeys/register` | Регистрация passkey |
+| DELETE | `/api/passkeys/{id}` | Удаление passkey |
+| POST | `/api/profile/verify-options` | Challenge для подтверждения действия |
+| PUT | `/api/profile/name` | Смена имени (с passkey-подтверждением) |
+
+## Структура проекта
+
+```
+app/
+  Http/Controllers/
+    Auth/
+      RegisterController.php    — регистрация
+      LoginController.php       — логин/logout
+      PasskeyController.php     — CRUD passkeys + passkey-логин
+    ProfileController.php       — смена имени с верификацией
+  Models/
+    User.php                    — Passport + WebAuthn
+
+resources/js/
+  app.js                        — точка входа
+  App.vue                       — корневой компонент с навигацией
+  router/index.js               — маршрутизация SPA
+  api/axios.js                  — HTTP-клиент с Bearer-токеном
+  composables/
+    useAuth.js                  — register, login, loginWithPasskey, logout
+    usePasskeys.js              — fetchPasskeys, registerPasskey, deletePasskey
+    webauthn.js                 — base64url утилиты для WebAuthn
+  pages/
+    Landing.vue                 — главная страница
+    Login.vue                   — форма логина + passkey
+    Register.vue                — форма регистрации
+    Dashboard.vue               — профиль + управление passkeys
+  components/
+    PasskeyList.vue             — список passkeys
+    PasskeyRegister.vue         — добавление passkey
+    ProfileEdit.vue             — смена имени с passkey-подтверждением
+
+config/
+  auth.php                      — dual-provider: eloquent + eloquent-webauthn
+  webauthn.php                  — настройки WebAuthn/FIDO2
+```
+
+## Архитектура аутентификации
+
+- **Email/password** — стандартный `Auth::attempt()`, выдаёт Passport personal access token
+- **Passkey (FIDO2/WebAuthn)** — через `laragear/webauthn`, challenge хранится в сессии, результат — Passport token
+- **Dual auth providers** — `eloquent` для Passport API guard, `eloquent-webauthn` для WebAuthn web guard
+- **SPA** — все API-запросы с Bearer-токеном, фронтенд использует нативный Web Authentication API браузера
